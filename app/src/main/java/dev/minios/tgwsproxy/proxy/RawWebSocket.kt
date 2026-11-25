@@ -4,6 +4,8 @@ import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
 import java.io.ByteArrayOutputStream
+import java.net.Inet4Address
+import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.Socket
 import java.net.UnknownHostException
@@ -95,7 +97,16 @@ class RawWebSocket private constructor(
                 transport.receiveBufferSize = bufferSize
                 transport.soTimeout = clampedTimeout
                 val endpoint = transportStage("address_resolution", onStage) {
-                    InetSocketAddress(connectHost, port).also { if (it.isUnresolved) throw UnknownHostException() }
+                    // IPv4 first: on Android the resolver often returns IPv6 first and the
+                    // IPv6->Cloudflare handshake stalls, so an A-record address is preferred.
+                    val candidates = try {
+                        InetAddress.getAllByName(connectHost).toList()
+                    } catch (_: UnknownHostException) {
+                        emptyList()
+                    }
+                    val ordered = candidates.sortedBy { if (it is Inet4Address) 0 else 1 }
+                    val address = ordered.firstOrNull() ?: throw UnknownHostException(connectHost)
+                    InetSocketAddress(address, port)
                 }
                 checkCurrent()
                 transportStage("tcp_connect", onStage) { transport.connect(endpoint, clampedTimeout) }

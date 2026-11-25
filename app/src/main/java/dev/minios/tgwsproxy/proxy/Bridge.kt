@@ -656,7 +656,10 @@ class Bridge(private val connectivity: ConnectivityTracker) {
             return null
         }
 
-        if (isMedia && config.cfH2Media && config.cfSecure && runtime.cloudflare.prefersTls()) {
+        // v2.2 (RF): the HTTP/2 channel is not media-only anymore. Android clients set the
+        // media flag only for DCs that have a media address, so media from DC1/3/5/203 used
+        // to travel over plain CF WebSocket, where large upload.getFile responses stall.
+        if (config.cfH2Media && config.cfSecure && runtime.cloudflare.prefersTls()) {
             val h2Domains = availableDomains.filter(runtime.cloudflare::tlsAvailable)
             val h2Timeout = (deadline - transportClockMs()).coerceAtMost(CF_H2_SETUP_TIMEOUT_MS)
             if (h2Domains.isNotEmpty() && h2Timeout > 0) {
