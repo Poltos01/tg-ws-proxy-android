@@ -34,6 +34,12 @@ jobs:
       - name: Assemble debug APK
         run: ./gradlew :app:assembleDebug --no-daemon --stacktrace
 
+      - name: Live transport check (real Cloudflare route)
+        continue-on-error: true
+        env:
+          TGWS_LIVE: '1'
+        run: ./gradlew :app:testDebugUnitTest --tests 'dev.minios.tgwsproxy.proxy.LiveCfTransportTest' --no-daemon --stacktrace
+
       - name: Rename APK
         run: |
           mkdir -p out

@@ -71,6 +71,12 @@ android {
         // Compose detectors bundled with this AGP cannot read Kotlin 2.1 metadata.
         disable += setOf("CoroutineCreationDuringComposition", "StateFlowValueCalledInComposition")
     }
+
+    testOptions {
+        // android.util.Log stubs must return defaults so JVM tests can drive the real
+        // proxy classes instead of the Android framework.
+        unitTests.isReturnDefaultValues = true
+    }
 }
 
 dependencies {
