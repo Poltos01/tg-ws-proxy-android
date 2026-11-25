@@ -6,6 +6,25 @@
 
 <p align="center"><a href="README.md">English</a> &nbsp; / &nbsp; <strong>Русский</strong></p>
 
+> ## Форк для работы в РФ (`Poltos01/tg-ws-proxy-android`)
+>
+> Основа — [crim50n/tg-ws-proxy-android](https://github.com/crim50n/tg-ws-proxy-android) v2.1.2 (Kotlin-порт ядра [Flowseal/tg-ws-proxy](https://github.com/Flowseal/tg-ws-proxy)).
+>
+> **Что изменено относительно оригинала:**
+>
+> - HTTP/2-транспорт Cloudflare включён не только для медиа-подключений (`dc_id < 0`), но и для
+>   обычных. Android-клиент ставит медиа-флаг только у DC с медиа-адресом, поэтому медиа с
+>   DC1/3/5/203 уходило в обычный CF-WebSocket, где большие ответы `upload.getFile` обрываются.
+> - При разрешении имён предпочитается IPv4: на Android резолвер часто отдаёт IPv6 первым,
+>   и рукопожатие с Cloudflare по IPv6 зависает.
+> - Добавлен живой интеграционный тест (`LiveCfTransportTest`): поднимает реальный прокси без
+>   DC-редиректов, проводит simulated-клиента по Cloudflare-маршруту и ждёт `resPQ` от DC. В CI
+>   запускается отдельным шагом (`TGWS_LIVE=1`), локально по умолчанию пропускается.
+> - Сборка debug-APK в GitHub Actions (`.github/workflows/build-debug.yml`).
+>
+> Маршруты, проверенные из РФ-сети: `wss://kws{dc}.{cf-домен}/apiws` (CF, порт 443 и 80) и
+> прямой WS через `149.154.167.220` для DC2/DC4; остальные IP Telegram на этой сети недоступны.
+
 <p align="center">
   <img src="screenshots/2.0.0/cover.jpg" width="100%" alt="Иллюстрация террасы со схемой подключения Android к Telegram через WebSocket">
 </p>
