@@ -32,6 +32,7 @@ class LiveCfTransportTest {
     private var server: TgWsProxyServer? = null
     private var secret: ByteArray = ByteArray(0)
     private val port = 15443
+    private val seenCodes = mutableListOf<String>()
 
     @Before
     fun setUp() {
@@ -67,8 +68,14 @@ class LiveCfTransportTest {
         withTimeout(20_000) { while (!srv.isRunning) delay(50) }
 
         val nonce = requestResPq(port, secret, dc = 2, timeoutMs = 25_000)
-        assertNotNull("no resPQ came back through the Cloudflare route", nonce)
-        assertTrue("Cloudflare route must be used", ProxyStats.connectionsCfProxy.get() > 0)
+        assertNotNull(
+            "no resPQ through the Cloudflare route; codes=$seenCodes stats=${ProxyStats.formatStats()}",
+            nonce,
+        )
+        assertTrue(
+            "Cloudflare route must be used; stats=${ProxyStats.formatStats()}",
+            ProxyStats.connectionsCfProxy.get() > 0,
+        )
     }
 
     /** Sends req_pq_multi and returns the echoed nonce when the DC answers with resPQ. */
@@ -142,13 +149,15 @@ class LiveCfTransportTest {
                     if (pending.size < 4 + length) break
                     val payload = pending.copyOfRange(4, 4 + length)
                     pending = pending.copyOfRange(4 + length, pending.size)
-                    if (payload.size < 28) continue
-                    val code = readIntLE(payload, 24)
+                    // Unencrypted MTProto message: auth_key_id(8) msg_id(8) msg_len(4) body
+                    if (payload.size < 40) continue
+                    val code = readIntLE(payload, 20)
                     if (code == 0x05162463) {  // resPQ
-                        val echoed = payload.copyOfRange(28, 44)
+                        val echoed = payload.copyOfRange(24, 40)
                         assertArrayEquals("resPQ nonce must match", nonce, echoed)
                         return echoed
                     }
+                    synchronized(seenCodes) { seenCodes += "0x%08X".format(code) }
                 }
             }
         }
